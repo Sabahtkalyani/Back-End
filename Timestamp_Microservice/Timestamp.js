@@ -1,32 +1,41 @@
 const express = require('express');
+const path = require('path');
 const app = express();
 
 app.get('/api/:date?', (req, res) => {
   const { date } = req.params;
 
   let inputDate;
-  if (!date) {
-    inputDate = new Date();
-  } else {
-    inputDate = new Date(date);
-  }
 
-  if (inputDate.toString() === 'Invalid Date') {
-    return res.json({ error: 'Invalid Date' });
-  }
+  try {
+    if (!date) {
+      inputDate = new Date();
+    } else {
+      inputDate = new Date(date);
+    }
 
-  res.json({
-    unix: inputDate.getTime(),
-    utc: inputDate.toUTCString()
-  });
+    if (isNaN(inputDate.getTime())) {
+      throw new Error('Invalid Date');
+    }
+
+    res.json({
+      unix: inputDate.getTime(),
+      utc: inputDate.toUTCString()
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
 });
-
-// Serve the HTML file
 app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/index.html');
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
-
-// Start the server
+app.use((req, res, next) => {
+  res.status(404).json({ error: 'Not Found' });
+});
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Internal Server Error' });
+});
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
